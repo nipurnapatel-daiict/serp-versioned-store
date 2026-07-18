@@ -1,0 +1,70 @@
+services:
+  mongodb:
+    image: mongo:6.0
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - serp_network
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_storage:/root/.ollama
+    entrypoint: [ "/bin/sh", "-c", "ollama serve & sleep 5 && ollama pull mistral:latest && tail -f /dev/null" ]
+    networks:
+      - serp_network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: search_backend
+    ports:
+      - "8000:8000"
+    environment:
+      # Pydantic Settings Validation Field Injection Configuration Mapping Matrices
+      - APP_NAME=SERP_Analytics_Backend
+      - APP_VERSION=1.0.0
+      - MONGO_URI=mongodb://mongodb:27017
+      - MONGODB_URL=mongodb://mongodb:27017
+      - DATABASE_NAME=serp_db
+      - SEARCH_COLLECTION=searches
+      # ⚠️ REPLACE THIS STRING WITH YOUR REAL SERPER API KEY ⚠️
+      - SERPER_API_KEY=YOUR_ACTUAL_SERPER_API_KEY
+      - SERPER_URL=https://serper.dev
+      - OLLAMA_URL=http://ollama:11434/api/generate
+      - CACHE_EXPIRY_SECONDS=60
+      - REQUEST_TIMEOUT=120
+    depends_on:
+      - mongodb
+      - ollama
+    networks:
+      - serp_network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: search_frontend
+    ports:
+      - "8501:8501"
+    environment:
+      - BASE_URL=http://backend:8000/api/v1
+    depends_on:
+      - backend
+    networks:
+      - serp_network
+
+volumes:
+  mongo_data:
+  ollama_storage:
+
+networks:
+  serp_network:
+    driver: bridge
