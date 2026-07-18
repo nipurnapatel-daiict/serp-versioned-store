@@ -1,9 +1,0 @@
-__pycache__/
-*.pyc
-.venv/
-venv/
-.git
-.gitignore
-.idea
-.vscode
-.streamlit/secrets.toml
